@@ -141,7 +141,11 @@ module's entity.
 
 ### Embedding (hand-built, the transparency we paid for)
 Tokenize (WordPiece, `[CLS]`/`[SEP]`, attention mask) → ONNX session run →
-**mean-pool token embeddings using the attention mask → L2-normalize**.
+**pool per the model's official recipe → L2-normalize**. For bge-v1.5 models the
+official recipe is **CLS pooling** (first token's vector); mean-pooling with the
+attention mask is the recipe for the MiniLM/e5 families. Pooling is a config
+toggle (CLS | MEAN) so a model swap stays config-only; the calibration test
+validates the active choice empirically.
 Wrong pooling/normalization produces vectors that look fine but rank garbage.
 **Calibration test required before trusting anything:** pin similarity expectations in
 a unit test, e.g. "the exit load is 1%" ≈ "redemption charge is one percent" (high) vs

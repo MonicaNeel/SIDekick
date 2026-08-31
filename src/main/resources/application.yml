@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/sidekick
+    username: sidekick
+    password: sidekick
+  jpa:
+    hibernate:
+      ddl-auto: update # dev convenience (PLAN §4); Flyway retrofit deferred
+    open-in-view: false
+
+sidekick:
+  embedding:
+    model-path: models/bge-small-en-v1.5/model.onnx
+    tokenizer-path: models/bge-small-en-v1.5/tokenizer.json
+    pooling: CLS # official recipe for bge-v1.5 (see ADR context in PLAN §6)

@@ -1,0 +1,17 @@
+# Postgres for SIDekick (PLAN §4: Postgres via Docker, app via Maven).
+# Start with: docker compose up -d postgres
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: sidekick-postgres
+    environment:
+      POSTGRES_DB: sidekick
+      POSTGRES_USER: sidekick
+      POSTGRES_PASSWORD: sidekick
+    ports:
+      - "5432:5432"
+    volumes:
+      - sidekick-pgdata:/var/lib/postgresql/data
+
+volumes:
+  sidekick-pgdata:

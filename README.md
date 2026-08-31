@@ -11,7 +11,10 @@ See [PLAN.md](PLAN.md) for scope and build order, and
 
 ## Status
 
-Build-order step 1 (eval set before any pipeline code) — in progress.
+Eval set complete (30 verified cases). Build-order step 2 in progress:
+PDF extraction, section-aware chunking, and the ONNX embedding pipeline
+(with its calibration test) are built; persistence and the ingestion CLI
+are next.
 
 ## Stack
 
