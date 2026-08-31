@@ -30,8 +30,8 @@ class ChunkEmbedderTest {
     @Test
     void pairsEveryChunkWithItsVectorInOrder() {
         List<Chunk> chunks = List.of(
-                new Chunk("f", "S1", 1, "ab"),
-                new Chunk("f", "S2", 2, "abcd"));
+                new Chunk("f", "S1", 1, 1, "ab"),
+                new Chunk("f", "S2", 2, 2, "abcd"));
         AtomicInteger progressCalls = new AtomicInteger();
 
         List<EmbeddedChunk> embedded =

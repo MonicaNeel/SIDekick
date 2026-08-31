@@ -37,6 +37,8 @@ class SectionAwareChunkerTest {
 
         assertEquals(1, chunks.size(), "small two-page section stays one chunk");
         assertEquals(1, chunks.get(0).page());
+        assertEquals(2, chunks.get(0).endPage(),
+                "a chunk spanning pages must know where it ends — eval hits depend on the range");
         assertTrue(chunks.get(0).text().contains("continue on the next page"));
     }
 

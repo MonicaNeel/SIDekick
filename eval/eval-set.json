@@ -106,7 +106,7 @@
       "question": "How many days until I receive my money after redeeming?",
       "fund_id": "hdfc-flexi-cap",
       "expected_answer": "Will be transferred within 3 working days from the receipt of the redemption request or as per timelines prescribed by AMFI in case of exceptional circumstances.",
-      "source_pages": [4],
+      "source_pages": [4, 63],
       "expected_section": "HIGHLIGHTS/SUMMARY OF THE SCHEME",
       "provenance": "hand",
       "notes": "Refer to redemption section."

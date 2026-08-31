@@ -17,7 +17,7 @@ class InMemoryVectorIndexTest {
     private static final float DIAG = (float) (1 / Math.sqrt(2)); // normalized [1,1]
 
     private static Entry entry(String id, String fund, float x, float y) {
-        return new Entry(id, fund, "S", 1, "text-" + id, new float[]{x, y});
+        return new Entry(id, fund, "S", 1, 1, "text-" + id, new float[]{x, y});
     }
 
     private InMemoryVectorIndex indexOf(Entry... entries) {

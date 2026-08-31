@@ -67,7 +67,8 @@ public final class ChunkPreflightCli {
                 continue;
             }
             total++;
-            boolean pageHit = chunks.stream().anyMatch(c -> evalCase.sourcePages().contains(c.page()));
+            boolean pageHit = chunks.stream().anyMatch(c -> evalCase.sourcePages().stream()
+                    .anyMatch(p -> p >= c.page() && p <= c.endPage()));
             boolean sectionExists = chunks.stream()
                     .anyMatch(c -> sectionsMatch(c.section(), evalCase.expectedSection()));
             if (pageHit) {

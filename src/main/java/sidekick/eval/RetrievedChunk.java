@@ -7,8 +7,10 @@ package sidekick.eval;
  *
  * @param chunkId stable id of the chunk
  * @param page    1-based PDF page the chunk starts on
+ * @param endPage page the chunk ends on (chunks span pages; a hit means an
+ *                expected page falls anywhere inside [page, endPage])
  * @param section heading the chunk sits under (as labeled by the chunker)
  * @param score   cosine similarity, higher = more similar
  */
-public record RetrievedChunk(String chunkId, int page, String section, double score) {
+public record RetrievedChunk(String chunkId, int page, int endPage, String section, double score) {
 }

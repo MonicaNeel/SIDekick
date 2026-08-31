@@ -34,6 +34,9 @@ public class ChunkEntity {
     @Column(nullable = false)
     private int page;
 
+    @Column(nullable = false)
+    private int endPage;
+
     @Column(nullable = false, columnDefinition = "text")
     private String text;
 
@@ -45,12 +48,13 @@ public class ChunkEntity {
     }
 
     public ChunkEntity(UUID documentId, String fundId, String section, int page,
-                       String text, byte[] embedding) {
+                       int endPage, String text, byte[] embedding) {
         this.id = UUID.randomUUID();
         this.documentId = documentId;
         this.fundId = fundId;
         this.section = section;
         this.page = page;
+        this.endPage = endPage;
         this.text = text;
         this.embedding = embedding;
     }
@@ -73,6 +77,10 @@ public class ChunkEntity {
 
     public int getPage() {
         return page;
+    }
+
+    public int getEndPage() {
+        return endPage;
     }
 
     public String getText() {

@@ -66,7 +66,7 @@ class RetrievalEvalRunner implements ApplicationRunner {
                 .collect(Collectors.toMap(EvalCase::id, Function.identity()));
 
         RetrievalPort port = (question, fundId, k) -> retriever.search(question, fundId, k).stream()
-                .map(s -> new RetrievedChunk(s.chunkId(), s.page(), s.section(), s.score()))
+                .map(s -> new RetrievedChunk(s.chunkId(), s.page(), s.endPage(), s.section(), s.score()))
                 .toList();
 
         EvalReport report = new EvalRunner(port, new EvalConfig(topK, null, label)).run(evalSet.cases());
@@ -89,6 +89,18 @@ class RetrievalEvalRunner implements ApplicationRunner {
                     result.topScore(),
                     answerable ? evalCase.sourcePages() : "-");
         }
+        System.out.println("\n--- misses in detail (what the top-k actually was) ---");
+        for (CaseResult result : report.perCase()) {
+            EvalCase evalCase = caseById.get(result.caseId());
+            if (evalCase.type() != EvalCase.CaseType.ANSWERABLE || result.retrievalHit()) {
+                continue;
+            }
+            System.out.printf("%nMISS %s%n  wanted: pages %s, section '%s'%n  got:%n",
+                    result.caseId(), evalCase.sourcePages(), evalCase.expectedSection());
+            result.retrieved().forEach(chunk -> System.out.printf(
+                    "    %.4f  p.%d-%d  %s%n", chunk.score(), chunk.page(), chunk.endPage(), chunk.section()));
+        }
+
         System.out.printf("%nRetrieval hit rate: %.1f%% (target >= 90%%)%n", report.retrievalHitRate() * 100);
         System.out.printf("Top-score ranges — answerable: %.4f..%.4f, unanswerable: %.4f..%.4f%n",
                 answerableScores.getMin(), answerableScores.getMax(),

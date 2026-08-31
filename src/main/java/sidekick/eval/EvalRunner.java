@@ -48,15 +48,16 @@ public final class EvalRunner {
                     hits++;
                 }
             }
-            results.add(new CaseResult(evalCase.id(), hitRank != null, hitRank, topScore, null));
+            results.add(new CaseResult(evalCase.id(), hitRank != null, hitRank, topScore, retrieved, null));
         }
         double hitRate = answerable == 0 ? 0 : (double) hits / answerable;
         return new EvalReport(config, Instant.now(), results, hitRate, null, null);
     }
 
     private static boolean isHit(RetrievedChunk chunk, EvalCase evalCase) {
-        return evalCase.sourcePages().contains(chunk.page())
-                || sectionsMatch(chunk.section(), evalCase.expectedSection());
+        boolean pageInRange = evalCase.sourcePages().stream()
+                .anyMatch(p -> p >= chunk.page() && p <= chunk.endPage());
+        return pageInRange || sectionsMatch(chunk.section(), evalCase.expectedSection());
     }
 
     /** Loose comparison: case, punctuation, and heading prefixes don't matter. */

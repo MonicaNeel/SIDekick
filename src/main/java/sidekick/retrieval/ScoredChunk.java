@@ -11,6 +11,7 @@ public record ScoredChunk(
         String fundId,
         String section,
         int page,
+        int endPage,
         String text,
         double score
 ) {

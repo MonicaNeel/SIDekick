@@ -1,5 +1,7 @@
 package sidekick.eval;
 
+import java.util.List;
+
 /**
  * How the system did on one eval case.
  *
@@ -9,6 +11,8 @@ package sidekick.eval;
  * @param hitRank      1-based rank of the first hit; null if no hit
  * @param topScore     similarity of the best-ranked chunk (hit or not) — the
  *                     raw material for tuning the refusal threshold later
+ * @param retrieved    the full top-k that came back — the X-ray for diagnosing
+ *                     misses (what outranked the right chunk, and by how much)
  * @param askResult    full-pipeline result; null in retrieval-only mode
  */
 public record CaseResult(
@@ -16,6 +20,7 @@ public record CaseResult(
         boolean retrievalHit,
         Integer hitRank,
         double topScore,
+        List<RetrievedChunk> retrieved,
         AskResult askResult
 ) {
 }

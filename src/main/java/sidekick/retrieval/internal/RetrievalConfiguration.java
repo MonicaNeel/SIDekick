@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import sidekick.embedding.TextEmbedder;
 import sidekick.retrieval.DefaultRetriever;
 import sidekick.retrieval.InMemoryVectorIndex;
+import sidekick.retrieval.QueryMode;
 import sidekick.retrieval.Retriever;
 
 /**
@@ -27,7 +28,8 @@ class RetrievalConfiguration {
 
     @Bean
     Retriever retriever(TextEmbedder embedder, InMemoryVectorIndex index,
-                        @Value("${sidekick.retrieval.query-prefix:}") String queryPrefix) {
-        return new DefaultRetriever(embedder, index, queryPrefix);
+                        @Value("${sidekick.retrieval.query-prefix:}") String queryPrefix,
+                        @Value("${sidekick.retrieval.query-mode:PLAIN}") QueryMode queryMode) {
+        return new DefaultRetriever(embedder, index, queryPrefix, queryMode);
     }
 }

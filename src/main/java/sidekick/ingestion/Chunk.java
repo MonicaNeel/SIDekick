@@ -9,9 +9,11 @@ package sidekick.ingestion;
  * @param fundId  manifest slug (cross-module reference by ID, never entity)
  * @param section canonical heading label, or "PREAMBLE" for text before the
  *                first recognized heading (cover pages, TOC)
- * @param page    1-based physical PDF page where this chunk STARTS; a chunk
- *                may run onto following pages
+ * @param page    1-based physical PDF page where this chunk starts
+ * @param endPage page where this chunk ends (== page when it fits on one);
+ *                the range matters because windowed chunks span pages and a
+ *                fact "on page 109" often lives in a chunk starting on 108
  * @param text    the chunk text
  */
-public record Chunk(String fundId, String section, int page, String text) {
+public record Chunk(String fundId, String section, int page, int endPage, String text) {
 }

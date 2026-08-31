@@ -69,7 +69,7 @@ public final class SectionAwareChunker {
             int endWord = Math.min(w + config.maxWordsPerChunk(), words.size());
             int textStart = words.get(w)[0];
             int textEnd = words.get(endWord - 1)[1];
-            chunks.add(new Chunk(fundId, section, doc.pageAt(textStart),
+            chunks.add(new Chunk(fundId, section, doc.pageAt(textStart), doc.pageAt(textEnd - 1),
                     doc.text().substring(textStart, textEnd)));
             if (endWord == words.size()) {
                 break;

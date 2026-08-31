@@ -20,7 +20,7 @@ public final class InMemoryVectorIndex {
 
     /** One indexed chunk: metadata plus its (L2-normalized) vector. */
     public record Entry(String chunkId, String fundId, String section, int page,
-                        String text, float[] vector) {
+                        int endPage, String text, float[] vector) {
     }
 
     private record Snapshot(List<Entry> entries) {
@@ -65,7 +65,7 @@ public final class InMemoryVectorIndex {
 
     private static ScoredChunk toResult(Entry entry, double score) {
         return new ScoredChunk(entry.chunkId(), entry.fundId(), entry.section(),
-                entry.page(), entry.text(), score);
+                entry.page(), entry.endPage(), entry.text(), score);
     }
 
     /** Cosine similarity of normalized vectors = plain dot product. */

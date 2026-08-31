@@ -13,6 +13,7 @@ public record StoredChunk(
         String fundId,
         String section,
         int page,
+        int endPage,
         String text,
         byte[] embedding
 ) {

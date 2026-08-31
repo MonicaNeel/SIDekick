@@ -53,7 +53,7 @@ class IndexLoader {
     private void reload(String trigger) {
         List<InMemoryVectorIndex.Entry> entries = chunkFinder.findAll().stream()
                 .map(c -> new InMemoryVectorIndex.Entry(c.id().toString(), c.fundId(),
-                        c.section(), c.page(), c.text(), VectorCodec.toFloats(c.embedding())))
+                        c.section(), c.page(), c.endPage(), c.text(), VectorCodec.toFloats(c.embedding())))
                 .toList();
         index.replaceAll(entries);
         log.info("Vector index reloaded ({}): {} chunks", trigger, entries.size());

@@ -23,7 +23,7 @@ public class ChunkFinder {
     public List<StoredChunk> findAll() {
         return chunks.findAll().stream()
                 .map(c -> new StoredChunk(c.getId(), c.getFundId(), c.getSection(),
-                        c.getPage(), c.getText(), c.getEmbedding()))
+                        c.getPage(), c.getEndPage(), c.getText(), c.getEmbedding()))
                 .toList();
     }
 }

@@ -23,7 +23,7 @@ class EvalRunnerTest {
     }
 
     private static RetrievedChunk chunk(int page, String section, double score) {
-        return new RetrievedChunk("c" + page, page, section, score);
+        return new RetrievedChunk("c" + page, page, page, section, score);
     }
 
     /** Scripted retrieval: per-fund fixed results, question ignored. */
@@ -63,6 +63,20 @@ class EvalRunnerTest {
         assertEquals(2.0 / 3.0, report.retrievalHitRate(), 1e-9,
                 "hit rate is over answerable cases only");
         assertNull(report.citationValidityRate(), "no generation metrics in retrieval-only mode");
+    }
+
+    @Test
+    void chunkSpanningPagesHitsWhenExpectedPageFallsInsideItsRange() {
+        // The page-108 lesson: the chunk STARTS on 108 but contains the
+        // page-109/110 facts — that must count as a hit.
+        RetrievalPort port = scripted(Map.of("f",
+                List.of(new RetrievedChunk("c", 108, 110, "Ongoing Offer Details", 0.65))));
+
+        EvalReport report = new EvalRunner(port, new EvalConfig(5, null, "test"))
+                .run(List.of(answerable("span", "f", List.of(109, 110), "Suspension of Sale")));
+
+        assertTrue(report.perCase().get(0).retrievalHit());
+        assertEquals(1, report.perCase().get(0).hitRank());
     }
 
     @Test

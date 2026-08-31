@@ -1,5 +1,6 @@
 package sidekick.ingestion;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,13 +36,17 @@ public class IngestionService {
     private final DocumentRepository documents;
     private final ChunkRepository chunks;
     private final TextEmbedder embedder;
+    private final boolean prependSection;
     private final ApplicationEventPublisher events;
 
     public IngestionService(DocumentRepository documents, ChunkRepository chunks,
-                            TextEmbedder embedder, ApplicationEventPublisher events) {
+                            TextEmbedder embedder,
+                            @Value("${sidekick.embedding.prepend-section:false}") boolean prependSection,
+                            ApplicationEventPublisher events) {
         this.documents = documents;
         this.chunks = chunks;
         this.embedder = embedder;
+        this.prependSection = prependSection;
         this.events = events;
     }
 
@@ -49,7 +54,7 @@ public class IngestionService {
     public Result ingest(Path pdfFile, String fundId) throws IOException {
         List<PageText> pages = new PdfTextExtractor().extract(pdfFile);
         List<Chunk> chunked = SectionAwareChunker.withDefaults().chunk(fundId, pages);
-        List<EmbeddedChunk> embedded = new ChunkEmbedder(embedder).embedAll(chunked);
+        List<EmbeddedChunk> embedded = new ChunkEmbedder(embedder, prependSection).embedAll(chunked);
 
         chunks.deleteByFundId(fundId);
         documents.deleteByFundId(fundId);
@@ -58,7 +63,8 @@ public class IngestionService {
         documents.save(document);
         chunks.saveAll(embedded.stream()
                 .map(e -> new ChunkEntity(document.getId(), fundId, e.chunk().section(),
-                        e.chunk().page(), e.chunk().text(), VectorCodec.toBytes(e.vector())))
+                        e.chunk().page(), e.chunk().endPage(), e.chunk().text(),
+                        VectorCodec.toBytes(e.vector())))
                 .toList());
 
         events.publishEvent(new DocumentIngested(fundId, document.getId()));
