@@ -29,7 +29,8 @@ class RetrievalConfiguration {
     @Bean
     Retriever retriever(TextEmbedder embedder, InMemoryVectorIndex index,
                         @Value("${sidekick.retrieval.query-prefix:}") String queryPrefix,
-                        @Value("${sidekick.retrieval.query-mode:PLAIN}") QueryMode queryMode) {
-        return new DefaultRetriever(embedder, index, queryPrefix, queryMode);
+                        @Value("${sidekick.retrieval.query-mode:PLAIN}") QueryMode queryMode,
+                        @Value("${sidekick.retrieval.max-per-section:0}") int maxPerSection) {
+        return new DefaultRetriever(embedder, index, queryPrefix, queryMode, maxPerSection);
     }
 }

@@ -45,9 +45,26 @@ class DefaultRetrieverTest {
     }
 
     @Test
+    void sectionCapTradesRedundancyForDiversity() {
+        InMemoryVectorIndex index = new InMemoryVectorIndex();
+        index.replaceAll(List.of(
+                new Entry("a1", "f", "SAME", 1, 1, "t", new float[]{1, 0}),
+                new Entry("a2", "f", "SAME", 2, 2, "t", new float[]{0.99f, 0.14f}),
+                new Entry("a3", "f", "SAME", 3, 3, "t", new float[]{0.98f, 0.19f}),
+                new Entry("b1", "f", "OTHER", 4, 4, "t", new float[]{0.9f, 0.43f})));
+        Retriever capped = new DefaultRetriever(STUB, index, PREFIX, QueryMode.PLAIN, 2);
+
+        List<String> ids = capped.search("q", "f", 3).stream().map(ScoredChunk::chunkId).toList();
+
+        // Without the cap: a1, a2, a3. With cap 2 per section: a3's seat goes
+        // to the best chunk from a DIFFERENT section.
+        assertEquals(List.of("a1", "a2", "b1"), ids);
+    }
+
+    @Test
     void plainAndPrefixedModesRankDifferently() {
-        Retriever plain = new DefaultRetriever(STUB, index(), PREFIX, QueryMode.PLAIN);
-        Retriever prefixed = new DefaultRetriever(STUB, index(), PREFIX, QueryMode.PREFIXED);
+        Retriever plain = new DefaultRetriever(STUB, index(), PREFIX, QueryMode.PLAIN, 0);
+        Retriever prefixed = new DefaultRetriever(STUB, index(), PREFIX, QueryMode.PREFIXED, 0);
 
         assertEquals("lexical-favorite", plain.search("q", "f", 1).get(0).chunkId());
         assertEquals("semantic-favorite", prefixed.search("q", "f", 1).get(0).chunkId());
@@ -63,7 +80,7 @@ class DefaultRetrieverTest {
         // champion). If this ever surprises you again, you are re-learning it.
         // topK=2 so each per-variant list is [own champion, nobody-favorite]:
         // champions appear in ONE list (1/61), nobody in BOTH (1/62 + 1/62).
-        Retriever fused = new DefaultRetriever(STUB, index(), PREFIX, QueryMode.FUSED);
+        Retriever fused = new DefaultRetriever(STUB, index(), PREFIX, QueryMode.FUSED, 0);
 
         List<ScoredChunk> results = fused.search("q", "f", 2);
 

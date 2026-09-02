@@ -22,22 +22,52 @@ public final class DefaultRetriever implements Retriever {
     private final InMemoryVectorIndex index;
     private final String queryPrefix;
     private final QueryMode mode;
+    private final int maxPerSection;
 
+    /**
+     * @param maxPerSection cap on results from any one section (0 = off).
+     *                      Overlapping windows make same-section near-
+     *                      duplicates that hog top-k seats (measured: 4 of 5
+     *                      seats on one query); capping trades redundancy for
+     *                      diversity.
+     */
     public DefaultRetriever(TextEmbedder embedder, InMemoryVectorIndex index,
-                            String queryPrefix, QueryMode mode) {
+                            String queryPrefix, QueryMode mode, int maxPerSection) {
         this.embedder = embedder;
         this.index = index;
         this.queryPrefix = queryPrefix == null ? "" : queryPrefix;
         this.mode = mode;
+        this.maxPerSection = maxPerSection;
     }
 
     @Override
     public List<ScoredChunk> search(String question, String fundId, int topK) {
-        return switch (mode) {
-            case PLAIN -> index.search(embedder.embed(question), fundId, topK);
-            case PREFIXED -> index.search(embedder.embed(queryPrefix + question), fundId, topK);
-            case FUSED -> fused(question, fundId, topK);
+        // Overfetch when capping: the cap discards some of the raw top list,
+        // so it needs a deeper pool to fill topK seats from.
+        int fetch = maxPerSection > 0 ? topK * 4 : topK;
+        List<ScoredChunk> ranked = switch (mode) {
+            case PLAIN -> index.search(embedder.embed(question), fundId, fetch);
+            case PREFIXED -> index.search(embedder.embed(queryPrefix + question), fundId, fetch);
+            case FUSED -> fused(question, fundId, fetch);
         };
+        return capPerSection(ranked, topK);
+    }
+
+    private List<ScoredChunk> capPerSection(List<ScoredChunk> ranked, int topK) {
+        if (maxPerSection <= 0) {
+            return ranked.subList(0, Math.min(topK, ranked.size()));
+        }
+        Map<String, Integer> perSection = new LinkedHashMap<>();
+        List<ScoredChunk> result = new ArrayList<>(topK);
+        for (ScoredChunk chunk : ranked) {
+            if (perSection.merge(chunk.section(), 1, Integer::sum) <= maxPerSection) {
+                result.add(chunk);
+                if (result.size() == topK) {
+                    break;
+                }
+            }
+        }
+        return result;
     }
 
     /**

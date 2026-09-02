@@ -20,4 +20,11 @@ sidekick:
     tokenizer-path: models/bge-small-en-v1.5/tokenizer.json
     pooling: CLS # official recipe for bge-v1.5 (see ADR context in PLAN §6)
   retrieval:
-    query-prefix: "" # optionally the bge instruction prefix; the eval judges it
+    # Config chosen by eval grid sweep 2026-08-31 (92% hit rate, 23/25;
+    # neighboring cells 88% — see work/eval-runs/). PLAIN/PREFIXED and
+    # cap=0 remain available for experiments.
+    query-mode: FUSED
+    query-prefix: "Represent this sentence for searching relevant passages: "
+    max-per-section: 2
+  eval:
+    top-k: 6

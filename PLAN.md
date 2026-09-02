@@ -153,9 +153,12 @@ a unit test, e.g. "the exit load is 1%" ≈ "redemption charge is one percent" (
 model swap.
 
 ### Query
-Embed question → cosine over in-memory matrix (optional fund filter) → top-5 chunks →
+Embed question → cosine over in-memory matrix (optional fund filter) → top-k chunks →
 prompt with cite-or-suppress rules → generation → validation → answer + citations +
-raw chunks (for the debug panel).
+raw chunks (for the debug panel). Retrieval specifics are config, tuned on the eval
+(as of 2026-08-31: dual-query RRF fusion — plain + bge-instruction-prefixed — with
+a max-2-chunks-per-section diversity cap and k=6; see application.yml and the
+eval-run reports).
 
 ### Two-stage confidence gate
 1. **Pre-generation:** top retrieval score below threshold (tuned on the eval set, not
