@@ -15,6 +15,7 @@ one's Status line. See any ADR for the template.
 | [ADR-005](ADR-005-refusal-plus-pointer.md) | Refuse-with-pointer instead of best-effort answers | Accepted |
 | [ADR-006](ADR-006-sebi-as-document-source.md) | SEBI filings page as the document source | Superseded by ADR-007 |
 | [ADR-007](ADR-007-amc-sites-as-source-eval-funds-pinned.md) | AMC websites as source; eval funds pinned to verified copies | Accepted |
+| [ADR-008](ADR-008-retrieval-config-by-eval-sweep.md) | Retrieval config (RRF fusion, section cap, k=6) chosen by eval sweep | Accepted |
 
 ## Pending decisions (no ADR yet)
 
