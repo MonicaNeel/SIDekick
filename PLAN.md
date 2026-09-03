@@ -56,6 +56,15 @@ prediction. The system reports what documents *say*, never what the user should 
   relevant section is X on page Y."
 - **Debug panel in UI:** collapsible view of retrieved chunks with similarity scores.
   Non-negotiable; it is the main instrument for understanding retrieval failures.
+- **Tracing & observability** (added to v1 scope 2026-09-03; built late in v1,
+  after generation works): a hand-built per-question `AskTrace` — plain Java,
+  zero Spring in cores per the hard rules — carrying a trace id, per-stage
+  timings (embed, search, gate, LLM call, validation), retrieval scores and
+  chunk ids, gate decisions, model name and token usage, and the final outcome.
+  Emitted as one structured JSON log line per question, and returned with the
+  answer so the debug panel can show it. Spring Boot Actuator at the edges for
+  health/metrics. No tracing frameworks in the cores; OpenTelemetry export is
+  post-v1 if ever.
 
 ### Deferred (do not build in v1)
 - **v1.5:** cross-document comparison ("which of these funds has no exit load?") —
@@ -197,7 +206,10 @@ eval-run reports).
    *This is the heart of the project.*
 4. **Generation** — OpenRouter client, confidence gate, citation validator; benchmark
    models via the eval runner.
-5. **Web UI + upload** — API endpoints, Thymeleaf shell, debug panel, async upload.
+5. **Tracing & observability** — hand-built `AskTrace` through the ask pipeline
+   (see §3), structured JSON logging, Actuator at the edges. Before the UI, so
+   the debug panel has trace data to show on day one.
+6. **Web UI + upload** — API endpoints, Thymeleaf shell, debug panel, async upload.
 
 ## 9. Known Risks / Notes
 

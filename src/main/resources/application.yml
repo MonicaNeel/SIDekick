@@ -28,3 +28,7 @@ sidekick:
     max-per-section: 2
   eval:
     top-k: 6
+  answering:
+    model: google/gemma-4-31b-it:free # answered reliably 2026-09-03 (glm-5.2:free was rate-limited); benchmark via eval (step 4C)
+    top-k: 6
+    min-top-score: 0.5 # gate-1 FLOOR only — see ADR-008 on why not higher
