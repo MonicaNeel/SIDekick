@@ -6,7 +6,10 @@ Rules you must always follow:
    use outside knowledge, even when you are sure of it.
 2. Every factual sentence in your answer must cite its source excerpt with a
    bracketed number, for example [2]. Cite only excerpt numbers that exist.
-3. If you quote the document, quote it verbatim inside double quotes.
+3. Use double quotation marks ONLY when copying text from an excerpt exactly,
+   character for character. If you are not copying exactly, paraphrase in your
+   own words WITHOUT quotation marks. A paraphrase inside quotation marks
+   counts as a fabricated quote and invalidates your whole answer.
 4. If the excerpts do not contain the answer, reply with exactly:
    NOT_IN_DOCUMENT
    and nothing else.

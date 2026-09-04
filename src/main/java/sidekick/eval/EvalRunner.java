@@ -19,10 +19,16 @@ import java.util.Locale;
 public final class EvalRunner {
 
     private final RetrievalPort retrieval;
+    private final AnsweringPort answering; // null = retrieval-only mode (step 3)
     private final EvalConfig config;
 
     public EvalRunner(RetrievalPort retrieval, EvalConfig config) {
+        this(retrieval, null, config);
+    }
+
+    public EvalRunner(RetrievalPort retrieval, AnsweringPort answering, EvalConfig config) {
         this.retrieval = retrieval;
+        this.answering = answering;
         this.config = config;
     }
 
@@ -30,6 +36,8 @@ public final class EvalRunner {
         List<CaseResult> results = new ArrayList<>();
         int answerable = 0;
         int hits = 0;
+        int cleanOutputs = 0;
+        int correctOutcomes = 0;
         for (EvalCase evalCase : cases) {
             List<RetrievedChunk> retrieved =
                     retrieval.retrieve(evalCase.question(), evalCase.fundId(), config.topK());
@@ -48,10 +56,25 @@ public final class EvalRunner {
                     hits++;
                 }
             }
-            results.add(new CaseResult(evalCase.id(), hitRank != null, hitRank, topScore, retrieved, null));
+
+            AskResult askResult = null;
+            if (answering != null) {
+                askResult = answering.ask(evalCase.question(), evalCase.fundId());
+                if (askResult.citationsValid()) {
+                    cleanOutputs++; // valid cited answer OR clean refusal — no gate-2 failure
+                }
+                boolean expectAnswer = evalCase.type() == EvalCase.CaseType.ANSWERABLE;
+                boolean gotAnswer = askResult.outcome() == AskResult.Outcome.ANSWERED;
+                if (expectAnswer == gotAnswer) {
+                    correctOutcomes++;
+                }
+            }
+            results.add(new CaseResult(evalCase.id(), hitRank != null, hitRank, topScore, retrieved, askResult));
         }
         double hitRate = answerable == 0 ? 0 : (double) hits / answerable;
-        return new EvalReport(config, Instant.now(), results, hitRate, null, null);
+        Double citationValidity = answering == null ? null : (double) cleanOutputs / cases.size();
+        Double refusalCorrectness = answering == null ? null : (double) correctOutcomes / cases.size();
+        return new EvalReport(config, Instant.now(), results, hitRate, citationValidity, refusalCorrectness);
     }
 
     private static boolean isHit(RetrievedChunk chunk, EvalCase evalCase) {

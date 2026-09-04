@@ -80,6 +80,35 @@ class EvalRunnerTest {
     }
 
     @Test
+    void fullModeScoresCitationDisciplineAndRefusalCorrectness() {
+        RetrievalPort retrieval = scripted(Map.of(
+                "f", List.of(chunk(1, "S", 0.8))));
+        // Scripted answering: answerable-1 answered cleanly; answerable-2
+        // wrongly refused (gate-2 failure); trap correctly refused (clean).
+        AnsweringPort answering = (question, fundId) -> switch (question) {
+            case "good?" -> new AskResult(AskResult.Outcome.ANSWERED, "fact [1]", List.of("c1"), true, List.of());
+            case "bad?" -> new AskResult(AskResult.Outcome.REFUSED, "refused", List.of(), false,
+                    List.of("quoted text not found verbatim"));
+            default -> new AskResult(AskResult.Outcome.REFUSED, "refused", List.of(), true, List.of());
+        };
+
+        EvalReport report = new EvalRunner(retrieval, answering, new EvalConfig(5, "test-model", ""))
+                .run(List.of(
+                        new EvalCase("a1", EvalCase.CaseType.ANSWERABLE, "good?", "f", "a",
+                                List.of(1), "S", EvalCase.Provenance.HAND, null),
+                        new EvalCase("a2", EvalCase.CaseType.ANSWERABLE, "bad?", "f", "a",
+                                List.of(1), "S", EvalCase.Provenance.HAND, null),
+                        new EvalCase("trap", EvalCase.CaseType.UNANSWERABLE, "t?", "f", null,
+                                List.of(), null, EvalCase.Provenance.HAND, null)));
+
+        // Clean outputs: a1 (valid answer) + trap (clean refusal) = 2/3.
+        assertEquals(2.0 / 3.0, report.citationValidityRate(), 1e-9);
+        // Correct outcomes: a1 answered (right) + a2 refused (WRONG) + trap refused (right) = 2/3.
+        assertEquals(2.0 / 3.0, report.refusalCorrectness(), 1e-9);
+        assertEquals("fact [1]", report.perCase().get(0).askResult().answerText());
+    }
+
+    @Test
     void sectionMatchingIgnoresCasePunctuationAndPrefixes() {
         assertTrue(EvalRunner.sectionsMatch("C. LOAD STRUCTURE", "Load Structure"));
         assertTrue(EvalRunner.sectionsMatch("ANNUAL SCHEME RECURRING EXPENSES",

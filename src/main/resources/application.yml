@@ -28,7 +28,12 @@ sidekick:
     max-per-section: 2
   eval:
     top-k: 6
+    question-delay-millis: 6000 # free routes rate-limit per minute; be gentle
   answering:
-    model: google/gemma-4-31b-it:free # answered reliably 2026-09-03 (glm-5.2:free was rate-limited); benchmark via eval (step 4C)
+    # Benchmarked 2026-09-03 (30-case full eval, prompt v2): minimax-m3:free
+    # scored 100% citation discipline / 96.7% refusal correctness with zero
+    # provider errors; gemma-4-31b-it:free was upstream-rate-limited (28/30
+    # failed), glm-5.2:free rate-limited entirely. Reports: work/eval-runs/.
+    model: minimax/minimax-m3:free
     top-k: 6
     min-top-score: 0.5 # gate-1 FLOOR only — see ADR-008 on why not higher
