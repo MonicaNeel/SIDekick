@@ -22,6 +22,12 @@ public class DocumentEntity {
     @Column(nullable = false)
     private String fundId;
 
+    // Human-readable fund name ("SBI Small Cap Fund"); nullable because the
+    // column arrived after the first documents — readers fall back to fundId.
+    // The future catalog module becomes the authoritative source of names.
+    @Column
+    private String displayName;
+
     @Column(nullable = false)
     private String fileName;
 
@@ -35,12 +41,17 @@ public class DocumentEntity {
         // JPA needs a no-arg constructor; nobody else should use it.
     }
 
-    public DocumentEntity(String fundId, String fileName, int pageCount) {
+    public DocumentEntity(String fundId, String displayName, String fileName, int pageCount) {
         this.id = UUID.randomUUID();
         this.fundId = fundId;
+        this.displayName = displayName;
         this.fileName = fileName;
         this.pageCount = pageCount;
         this.ingestedAt = Instant.now();
+    }
+
+    public String getDisplayName() {
+        return displayName;
     }
 
     public UUID getId() {

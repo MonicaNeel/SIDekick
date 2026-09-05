@@ -52,6 +52,12 @@ public class IngestionService {
 
     @Transactional
     public Result ingest(Path pdfFile, String fundId) throws IOException {
+        return ingest(pdfFile, fundId, null);
+    }
+
+    /** @param displayName human-readable fund name shown in the UI; null falls back to fundId */
+    @Transactional
+    public Result ingest(Path pdfFile, String fundId, String displayName) throws IOException {
         List<PageText> pages = new PdfTextExtractor().extract(pdfFile);
         List<Chunk> chunked = SectionAwareChunker.withDefaults().chunk(fundId, pages);
         List<EmbeddedChunk> embedded = new ChunkEmbedder(embedder, prependSection).embedAll(chunked);
@@ -59,7 +65,8 @@ public class IngestionService {
         chunks.deleteByFundId(fundId);
         documents.deleteByFundId(fundId);
 
-        DocumentEntity document = new DocumentEntity(fundId, pdfFile.getFileName().toString(), pages.size());
+        DocumentEntity document = new DocumentEntity(fundId, displayName,
+                pdfFile.getFileName().toString(), pages.size());
         documents.save(document);
         chunks.saveAll(embedded.stream()
                 .map(e -> new ChunkEntity(document.getId(), fundId, e.chunk().section(),
