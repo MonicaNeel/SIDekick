@@ -3,12 +3,14 @@ package sidekick.answering;
 import sidekick.retrieval.Retriever;
 import sidekick.retrieval.ScoredChunk;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * The full ask pipeline (PLAN §6): retrieve -> gate 1 -> prompt -> LLM ->
  * gate 2 -> answer or refusal-with-pointer. Zero Spring imports; wired at the
- * module edge.
+ * module edge. Every question is flight-recorded into an AskTrace (PLAN §3).
  *
  * Gate 1 is deliberately only a FLOOR (ADR-008): measured score ranges of
  * answerable and unanswerable questions overlap, so a threshold cannot
@@ -18,8 +20,11 @@ import java.util.List;
  */
 public final class AnswerService {
 
-    /** @param minTopScore gate-1 floor: below this, refuse without an LLM call */
-    public record Config(int topK, double minTopScore) {
+    /**
+     * @param minTopScore gate-1 floor: below this, refuse without an LLM call
+     * @param modelName   for the trace; the actual route lives in LlmClient
+     */
+    public record Config(int topK, double minTopScore, String modelName) {
     }
 
     private static final String REFUSAL_TEXT =
@@ -43,23 +48,38 @@ public final class AnswerService {
     }
 
     public Answer ask(String question, String fundId, String fundName) {
-        List<ScoredChunk> retrieved = retriever.search(question, fundId, config.topK());
+        String traceId = UUID.randomUUID().toString();
+        List<AskTrace.Stage> stages = new ArrayList<>();
+
+        List<ScoredChunk> retrieved = timed(stages, "retrieval",
+                () -> retriever.search(question, fundId, config.topK()));
+        double topScore = retrieved.isEmpty() ? 0 : retrieved.get(0).score();
 
         // Gate 1: nothing worth an LLM call.
-        if (retrieved.isEmpty() || retrieved.get(0).score() < config.minTopScore()) {
-            return refusal(retrieved, List.of());
+        if (retrieved.isEmpty() || topScore < config.minTopScore()) {
+            AskTrace trace = new AskTrace(traceId, fundId, null, stages, topScore, false,
+                    chunkRefs(retrieved), null, null, AskTrace.Outcome.REFUSED_GATE1);
+            return refusal(retrieved, List.of(), trace);
         }
 
-        String modelOutput = llm.complete(prompts.systemPrompt(),
-                prompts.userPrompt(fundName, question, retrieved));
+        LlmResponse response = timed(stages, "llm",
+                () -> llm.complete(prompts.systemPrompt(),
+                        prompts.userPrompt(fundName, question, retrieved)));
 
-        CitationValidator.Result validation = validator.validate(modelOutput,
-                retrieved.stream().map(ScoredChunk::text).toList());
+        CitationValidator.Result validation = timed(stages, "validation",
+                () -> validator.validate(response.content(),
+                        retrieved.stream().map(ScoredChunk::text).toList()));
+
+        AskTrace.Outcome outcome = validation.refusal() ? AskTrace.Outcome.REFUSED_BY_MODEL
+                : validation.valid() ? AskTrace.Outcome.ANSWERED
+                : AskTrace.Outcome.REFUSED_VALIDATION;
+        AskTrace trace = new AskTrace(traceId, fundId, config.modelName(), stages, topScore, true,
+                chunkRefs(retrieved), response.promptTokens(), response.completionTokens(), outcome);
 
         // Gate 2: the model refused, or its answer failed validation — either
         // way the user gets an honest refusal, never an unverified answer.
-        if (validation.refusal() || !validation.valid()) {
-            return refusal(retrieved, validation.problems());
+        if (outcome != AskTrace.Outcome.ANSWERED) {
+            return refusal(retrieved, validation.problems(), trace);
         }
 
         List<Answer.Citation> citations = validation.citations().stream()
@@ -69,19 +89,34 @@ public final class AnswerService {
                             chunk.page(), chunk.endPage());
                 })
                 .toList();
-        return new Answer(Answer.Outcome.ANSWERED, modelOutput, citations,
-                null, null, retrieved, List.of());
+        return new Answer(Answer.Outcome.ANSWERED, response.content(), citations,
+                null, null, retrieved, List.of(), trace);
+    }
+
+    /** Run one stage and record it span-style: name, start, duration. */
+    private static <T> T timed(List<AskTrace.Stage> stages, String name, java.util.function.Supplier<T> work) {
+        long startEpoch = System.currentTimeMillis();
+        long startNanos = System.nanoTime();
+        T result = work.get();
+        stages.add(new AskTrace.Stage(name, startEpoch, (System.nanoTime() - startNanos) / 1_000_000));
+        return result;
+    }
+
+    private static List<AskTrace.ChunkRef> chunkRefs(List<ScoredChunk> retrieved) {
+        return retrieved.stream()
+                .map(c -> new AskTrace.ChunkRef(c.chunkId(), c.section(), c.page(), c.score()))
+                .toList();
     }
 
     /** Refusal-plus-pointer (ADR-005): aim the reader at the nearest section. */
-    private static Answer refusal(List<ScoredChunk> retrieved, List<String> problems) {
+    private static Answer refusal(List<ScoredChunk> retrieved, List<String> problems, AskTrace trace) {
         if (retrieved.isEmpty()) {
             return new Answer(Answer.Outcome.REFUSED, REFUSAL_TEXT_EMPTY, List.of(),
-                    null, null, retrieved, problems);
+                    null, null, retrieved, problems, trace);
         }
         ScoredChunk top = retrieved.get(0);
         return new Answer(Answer.Outcome.REFUSED,
                 REFUSAL_TEXT.formatted(top.section(), top.page()),
-                List.of(), top.section(), top.page(), retrieved, problems);
+                List.of(), top.section(), top.page(), retrieved, problems, trace);
     }
 }

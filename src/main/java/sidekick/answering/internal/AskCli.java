@@ -1,5 +1,7 @@
 package sidekick.answering.internal;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -17,6 +19,8 @@ import sidekick.answering.AnswerService;
 @Component
 @ConditionalOnProperty("sidekick.ask.question")
 class AskCli implements ApplicationRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(AskCli.class);
 
     private final AnswerService answers;
     private final String question;
@@ -52,6 +56,23 @@ class AskCli implements ApplicationRunner {
             var chunk = answer.retrieved().get(i);
             System.out.printf("  [%d] %.4f  p.%d-%d  %s%n", i + 1, chunk.score(),
                     chunk.page(), chunk.endPage(), chunk.section());
+        }
+        printTrace(answer.trace());
+    }
+
+    private void printTrace(sidekick.answering.AskTrace trace) {
+        System.out.println("\n--- trace " + trace.traceId() + " ---");
+        trace.stages().forEach(s -> System.out.printf("  %-11s %5d ms%n", s.name(), s.durationMillis()));
+        System.out.printf("  outcome %s | gate1 %s (top %.4f) | tokens %s in / %s out | model %s%n",
+                trace.outcome(), trace.gate1Passed() ? "passed" : "refused", trace.topScore(),
+                trace.promptTokens(), trace.completionTokens(), trace.model());
+        try {
+            // The one-JSON-line-per-question log record (PLAN §3) — emitted at
+            // the edge; the core only assembles the data.
+            log.info("askTrace {}", new com.fasterxml.jackson.databind.ObjectMapper()
+                    .writeValueAsString(trace));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("could not serialize askTrace", e);
         }
     }
 }

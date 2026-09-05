@@ -50,9 +50,10 @@ class AnsweringConfiguration {
     AnswerService answerService(Retriever retriever, PromptAssembler prompts, LlmClient llm,
                                 CitationValidator validator,
                                 @Value("${sidekick.answering.top-k:6}") int topK,
-                                @Value("${sidekick.answering.min-top-score:0.5}") double minTopScore) {
+                                @Value("${sidekick.answering.min-top-score:0.5}") double minTopScore,
+                                @Value("${sidekick.answering.model}") String modelName) {
         return new AnswerService(retriever, prompts, llm, validator,
-                new AnswerService.Config(topK, minTopScore));
+                new AnswerService.Config(topK, minTopScore, modelName));
     }
 
     private static String loadResource(String classpathLocation) {

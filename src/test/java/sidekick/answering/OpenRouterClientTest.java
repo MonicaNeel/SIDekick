@@ -25,7 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class OpenRouterClientTest {
 
     private static final String OK_RESPONSE = """
-            {"choices": [{"message": {"role": "assistant", "content": "The exit load is 1% [1]."}}]}
+            {"choices": [{"message": {"role": "assistant", "content": "The exit load is 1% [1]."}}],
+             "usage": {"prompt_tokens": 812, "completion_tokens": 44}}
             """;
 
     private HttpServer server;
@@ -63,12 +64,14 @@ class OpenRouterClientTest {
     }
 
     @Test
-    void sendsBearerAuthAndParsesContent() {
+    void sendsBearerAuthAndParsesContentAndUsage() {
         respondWith(200);
 
-        String content = client().complete("sys", "user");
+        LlmResponse response = client().complete("sys", "user");
 
-        assertEquals("The exit load is 1% [1].", content);
+        assertEquals("The exit load is 1% [1].", response.content());
+        assertEquals(812, response.promptTokens());
+        assertEquals(44, response.completionTokens());
         assertEquals("Bearer test-key", authHeaders.get(0));
     }
 
@@ -76,9 +79,9 @@ class OpenRouterClientTest {
     void retriesOn429ThenSucceeds() {
         respondWith(429, 429, 200);
 
-        String content = client().complete("sys", "user");
+        LlmResponse response = client().complete("sys", "user");
 
-        assertEquals("The exit load is 1% [1].", content);
+        assertEquals("The exit load is 1% [1].", response.content());
         assertEquals(3, requests.get(), "two rate-limited attempts, then success");
     }
 

@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class AnswerServiceTest {
 
-    private static final AnswerService.Config CONFIG = new AnswerService.Config(5, 0.5);
+    private static final AnswerService.Config CONFIG = new AnswerService.Config(5, 0.5, "test-model");
     private static final PromptAssembler PROMPTS =
             new PromptAssembler("system", "{fund_name} {chunks} {question}");
 
@@ -28,7 +28,8 @@ class AnswerServiceTest {
     }
 
     private static AnswerService service(Retriever retriever, String llmOutput) {
-        return new AnswerService(retriever, PROMPTS, (sys, user) -> llmOutput,
+        return new AnswerService(retriever, PROMPTS,
+                (sys, user) -> new LlmResponse(llmOutput, 120, 45),
                 new CitationValidator(), CONFIG);
     }
 
@@ -42,6 +43,17 @@ class AnswerServiceTest {
         assertEquals(Answer.Outcome.ANSWERED, answer.outcome());
         assertEquals(1, answer.citations().size());
         assertEquals("LOAD STRUCTURE", answer.citations().get(0).section());
+
+        // The flight recorder rode along.
+        AskTrace trace = answer.trace();
+        assertEquals(AskTrace.Outcome.ANSWERED, trace.outcome());
+        assertEquals(List.of("retrieval", "llm", "validation"),
+                trace.stages().stream().map(AskTrace.Stage::name).toList());
+        assertEquals("test-model", trace.model());
+        assertEquals(120, trace.promptTokens());
+        assertEquals(45, trace.completionTokens());
+        assertEquals(1, trace.retrieved().size());
+        assertTrue(trace.gate1Passed());
     }
 
     @Test
@@ -57,6 +69,12 @@ class AnswerServiceTest {
         assertEquals(Answer.Outcome.REFUSED, answer.outcome());
         assertTrue(answer.text().contains("LOAD STRUCTURE"), "refusal carries the pointer");
         assertEquals(24, answer.pointerPage());
+
+        AskTrace trace = answer.trace();
+        assertEquals(AskTrace.Outcome.REFUSED_GATE1, trace.outcome());
+        assertEquals(List.of("retrieval"), trace.stages().stream().map(AskTrace.Stage::name).toList(),
+                "no llm/validation stages when gate 1 refuses");
+        assertEquals(null, trace.model(), "no model involved pre-LLM");
     }
 
     @Test
@@ -67,6 +85,7 @@ class AnswerServiceTest {
 
         assertEquals(Answer.Outcome.REFUSED, answer.outcome());
         assertEquals("LOAD STRUCTURE", answer.pointerSection());
+        assertEquals(AskTrace.Outcome.REFUSED_BY_MODEL, answer.trace().outcome());
     }
 
     @Test
@@ -80,6 +99,7 @@ class AnswerServiceTest {
 
         assertEquals(Answer.Outcome.REFUSED, answer.outcome());
         assertTrue(answer.validationProblems().get(0).contains("no excerpts"));
+        assertEquals(AskTrace.Outcome.REFUSED_VALIDATION, answer.trace().outcome());
     }
 
     @Test

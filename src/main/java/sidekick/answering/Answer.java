@@ -16,6 +16,7 @@ import java.util.List;
  * @param pointerPage        page of that section (refusals; null otherwise)
  * @param retrieved          the chunks retrieval returned (debug panel, PLAN §3)
  * @param validationProblems why gate 2 rejected the model's output, if it did
+ * @param trace              the flight recorder for this question (PLAN §3)
  */
 public record Answer(
         Outcome outcome,
@@ -24,7 +25,8 @@ public record Answer(
         String pointerSection,
         Integer pointerPage,
         List<ScoredChunk> retrieved,
-        List<String> validationProblems
+        List<String> validationProblems,
+        AskTrace trace
 ) {
 
     public enum Outcome { ANSWERED, REFUSED }

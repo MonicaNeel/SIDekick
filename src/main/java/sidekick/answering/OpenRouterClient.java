@@ -42,7 +42,7 @@ public final class OpenRouterClient implements LlmClient {
     }
 
     @Override
-    public String complete(String systemPrompt, String userPrompt) {
+    public LlmResponse complete(String systemPrompt, String userPrompt) {
         if (apiKey == null || apiKey.isBlank()) {
             throw new LlmException("OPENROUTER_API_KEY is not set — set the environment variable and restart");
         }
@@ -90,17 +90,24 @@ public final class OpenRouterClient implements LlmClient {
         return body.toString();
     }
 
-    private static String extractContent(String responseBody) {
+    private static LlmResponse extractContent(String responseBody) {
         try {
             JsonNode root = JSON.readTree(responseBody);
             JsonNode content = root.path("choices").path(0).path("message").path("content");
             if (content.isMissingNode() || content.isNull()) {
                 throw new LlmException("no message content in OpenRouter response: " + truncate(responseBody));
             }
-            return content.asText();
+            JsonNode usage = root.path("usage");
+            return new LlmResponse(content.asText(),
+                    intOrNull(usage.path("prompt_tokens")),
+                    intOrNull(usage.path("completion_tokens")));
         } catch (IOException e) {
             throw new LlmException("cannot parse OpenRouter response", e);
         }
+    }
+
+    private static Integer intOrNull(JsonNode node) {
+        return node.isInt() || node.isLong() ? node.asInt() : null;
     }
 
     private static void sleep(long millis) {

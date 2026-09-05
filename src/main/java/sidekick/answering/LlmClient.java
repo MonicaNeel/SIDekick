@@ -7,5 +7,5 @@ package sidekick.answering;
 public interface LlmClient {
 
     /** @throws LlmException when the provider fails after retries */
-    String complete(String systemPrompt, String userPrompt);
+    LlmResponse complete(String systemPrompt, String userPrompt);
 }
