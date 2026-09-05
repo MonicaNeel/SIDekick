@@ -41,7 +41,7 @@ prediction. The system reports what documents *say*, never what the user should 
   AUM/popularity (large HDFC / ICICI / SBI / Nippon schemes people actually hold),
   not by download convenience. The UI must disclose each document's source and
   date — and that
-  time-sensitive facts (taxation especially, which changes with every annual
+  time-sensitive facts (taxation especially, which can change with any annual
   budget) reflect the document as filed, not current law; users must verify
   current rules independently. Answers state what the document says, dated as the
   document is; the system never fetches or overlays current law (that would break

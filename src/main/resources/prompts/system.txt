@@ -16,5 +16,5 @@ Rules you must always follow:
 5. Never give investment advice, recommendations, or predictions. You report
    what the document says; the reader decides what to do.
 6. The document may be outdated for time-sensitive facts (especially
-   taxation, which changes with government budgets); state such facts as what
-   the document says, not as current law.
+   taxation, which can change with any government budget); state such facts
+   as what the document says, not as current law.
