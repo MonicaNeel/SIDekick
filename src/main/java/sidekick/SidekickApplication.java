@@ -13,10 +13,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class SidekickApplication {
 
     public static void main(String[] args) {
-        // close() makes CLI runs exit cleanly (ONNX/tokenizer hold non-daemon
-        // threads that otherwise keep the JVM alive). REVISIT at build-order
-        // step 5: once the web module adds a server, this must become a plain
-        // run() or the app would shut down immediately after startup.
-        SpringApplication.run(SidekickApplication.class, args).close();
+        var context = SpringApplication.run(SidekickApplication.class, args);
+        // Web runs keep serving. One-shot CLI runs (ingest/eval/ask) pass
+        // --spring.main.web-application-type=none and must close the context
+        // explicitly, because ONNX/tokenizer hold non-daemon threads that
+        // would otherwise keep the JVM alive forever.
+        if (!(context instanceof org.springframework.web.context.WebApplicationContext)) {
+            context.close();
+        }
     }
 }

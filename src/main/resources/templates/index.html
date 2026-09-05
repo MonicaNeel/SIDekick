@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SIDekick</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --ink: #1c2733; --muted: #64748b; --line: #e2e8f0; --accent: #0f6b54; --bg: #f7f9fa; }
+        * { box-sizing: border-box; }
+        body { margin: 0 auto; max-width: 880px; padding: 2rem 1rem 4rem;
+               font: 15px/1.55 system-ui, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+        h1 { font-size: 1.5rem; margin: 0; }
+        h1 small { color: var(--muted); font-weight: 400; font-size: .95rem; }
+        header.brand { display: flex; align-items: center; gap: .55rem; }
+        .brand svg { flex-shrink: 0; }
+        .brand h1 { font-family: 'Sora', system-ui, "Segoe UI", sans-serif; font-weight: 400; letter-spacing: -.02em; }
+        .brand .sid { font-weight: 800; color: var(--accent); }
+        .card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 1.1rem 1.3rem; margin-top: 1rem; }
+        label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; text-transform: uppercase; letter-spacing: .04em; }
+        select, textarea { width: 100%; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; }
+        textarea { resize: vertical; min-height: 3.2rem; }
+        button { margin-top: .8rem; padding: .55rem 1.4rem; border: 0; border-radius: 8px;
+                 background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+        button:disabled { opacity: .5; cursor: wait; }
+        .source-note { font-size: .78rem; color: var(--muted); margin-top: .5rem; }
+        #answer-text { white-space: pre-wrap; }
+        .outcome { display: inline-block; font-size: .75rem; font-weight: 600; padding: .15rem .6rem;
+                   border-radius: 99px; margin-bottom: .6rem; }
+        .outcome.ANSWERED { background: #e7f5ef; color: #0f6b54; }
+        .outcome.REFUSED  { background: #fdf0e7; color: #9a4b0f; }
+        .citation { display: inline-block; font-size: .78rem; background: #eef4f9; border: 1px solid var(--line);
+                    border-radius: 6px; padding: .2rem .55rem; margin: .15rem .3rem 0 0; }
+        details { margin-top: 1rem; }
+        summary { cursor: pointer; color: var(--muted); font-size: .85rem; }
+        .chunk { border-left: 3px solid var(--line); padding: .4rem .8rem; margin: .6rem 0; font-size: .82rem; }
+        .chunk .meta { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: .75rem; }
+        .chunk .text { white-space: pre-wrap; max-height: 9rem; overflow-y: auto; margin-top: .25rem; }
+        table.trace { border-collapse: collapse; font-size: .8rem; margin-top: .5rem; }
+        table.trace td { border: 1px solid var(--line); padding: .25rem .7rem; }
+        .error { color: #b3261e; }
+        .disclaimer { font-size: .74rem; color: var(--muted); margin-top: 2rem; border-top: 1px solid var(--line); padding-top: .8rem; }
+    </style>
+</head>
+<body>
+<header class="brand">
+    <svg width="28" height="28" viewBox="0 0 32 32" role="img" aria-label="SIDekick logo" xmlns="http://www.w3.org/2000/svg">
+        <rect width="32" height="32" rx="8" fill="#0f6b54"/>
+        <path d="M11 7.5h10a1 1 0 0 1 1 1V25l-6-4.1L10 25V8.5a1 1 0 0 1 1-1Z" fill="#ffffff"/>
+        <circle cx="16" cy="13.5" r="2.6" fill="#e8963f"/>
+    </svg>
+    <h1><span class="sid">SID</span>ekick <small>— ask a Scheme Information Document</small></h1>
+</header>
+
+<div class="card">
+    <label for="fund">Fund</label>
+    <select id="fund"></select>
+    <div class="source-note" id="source-note"></div>
+    <label for="question" style="margin-top: .9rem">Question</label>
+    <textarea id="question" placeholder="e.g. What is the exit load if I redeem after 8 months?"></textarea>
+    <button id="ask">Ask</button>
+</div>
+
+<div class="card" id="result" hidden>
+    <span class="outcome" id="outcome"></span>
+    <div id="answer-text"></div>
+    <div id="citations"></div>
+    <details id="debug">
+        <summary>Debug panel — retrieved chunks &amp; trace</summary>
+        <div id="chunks"></div>
+        <table class="trace" id="trace"></table>
+    </details>
+</div>
+
+<p class="disclaimer">
+    <strong>Disclaimer:</strong> Answers report only what the selected Scheme
+    Information Document says, as of the document's date shown above.
+    Time-sensitive facts may be outdated — taxation especially, since any
+    year's Union Budget can change the rules; verify current rules
+    independently. <strong>This tool provides no investment advice.</strong>
+</p>
+
+<script>
+    const el = id => document.getElementById(id);
+    let funds = [];
+
+    async function loadFunds() {
+        funds = await (await fetch('/api/funds')).json();
+        el('fund').innerHTML = funds.map(f =>
+            `<option value="${f.fundId}">${esc(f.displayName)}</option>`).join('');
+        showSource();
+        el('fund').onchange = showSource;
+    }
+
+    function showSource() {
+        const f = funds.find(x => x.fundId === el('fund').value);
+        if (f) el('source-note').textContent =
+            `Source: ${f.fileName} — ${f.pageCount} pages, ingested ${f.ingestedAt.substring(0, 10)}`;
+    }
+
+    async function ask() {
+        const button = el('ask');
+        button.disabled = true; button.textContent = 'Asking…';
+        el('result').hidden = true;
+        try {
+            const response = await fetch(`/api/funds/${el('fund').value}/ask`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question: el('question').value})
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || response.statusText);
+            render(data);
+        } catch (e) {
+            el('result').hidden = false;
+            el('outcome').className = 'outcome REFUSED';
+            el('outcome').textContent = 'ERROR';
+            el('answer-text').innerHTML = `<span class="error"></span>`;
+            el('answer-text').querySelector('.error').textContent = e.message;
+            el('citations').innerHTML = '';
+        } finally {
+            button.disabled = false; button.textContent = 'Ask';
+        }
+    }
+
+    function render(data) {
+        el('result').hidden = false;
+        el('outcome').className = 'outcome ' + data.outcome;
+        el('outcome').textContent = data.outcome;
+        el('answer-text').textContent = data.text;
+        el('citations').innerHTML = data.citations.map(c =>
+            `<span class="citation">[${c.excerptNumber}] ${esc(c.section)} · p.${c.page}${c.endPage !== c.page ? '–' + c.endPage : ''}</span>`
+        ).join('');
+
+        el('chunks').innerHTML = data.retrieved.map((c, i) => `
+            <div class="chunk">
+                <div class="meta">[${i + 1}] score ${c.score.toFixed(4)} · p.${c.page}–${c.endPage} · ${esc(c.section)}</div>
+                <div class="text">${esc(c.text)}</div>
+            </div>`).join('');
+
+        const t = data.trace;
+        const rows = t.stages.map(s => `<tr><td>${esc(s.name)}</td><td>${s.durationMillis} ms</td></tr>`);
+        rows.push(`<tr><td>outcome</td><td>${esc(t.outcome)}</td></tr>`);
+        rows.push(`<tr><td>gate 1</td><td>${t.gate1Passed ? 'passed' : 'refused'} (top ${t.topScore.toFixed(4)})</td></tr>`);
+        if (t.model) rows.push(`<tr><td>model</td><td>${esc(t.model)}</td></tr>`);
+        if (t.promptTokens != null) rows.push(`<tr><td>tokens</td><td>${t.promptTokens} in / ${t.completionTokens} out</td></tr>`);
+        el('trace').innerHTML = rows.join('');
+    }
+
+    const esc = s => s == null ? '' : String(s)
+        .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+
+    el('ask').onclick = ask;
+    el('question').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
+    });
+    loadFunds();
+</script>
+</body>
+</html>
