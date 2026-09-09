@@ -1,4 +1,8 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 20MB # SIDs run 1-2MB; generous headroom, still bounded
+      max-request-size: 21MB
   datasource:
     url: jdbc:postgresql://localhost:5432/sidekick
     username: sidekick
@@ -15,6 +19,9 @@ spring:
       republish-outstanding-events-on-restart: true
 
 sidekick:
+  ingest:
+    # ADR-007: the eval corpus is pinned — uploads may never replace these.
+    pinned-funds: hdfc-flexi-cap,sbi-small-cap,icici-bluechip,icici-longterm-equity
   embedding:
     model-path: models/bge-small-en-v1.5/model.onnx
     tokenizer-path: models/bge-small-en-v1.5/tokenizer.json

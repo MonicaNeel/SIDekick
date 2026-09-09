@@ -78,6 +78,13 @@ prediction. The system reports what documents *say*, never what the user should 
 - **Later:** Angular/React SPA (the JSON API is already the contract), Flyway
   migrations (retrofit when the schema stabilizes), CI (GitHub Actions), document
   versioning beyond replace-on-refetch.
+- **Before any public hosting (hard gate, not optional):** rate limiting on
+  `/api/**` — every stranger's question spends the OpenRouter key, so cap
+  per-IP request rates (especially `/ask`) before the app gets a public URL —
+  and a size cap + per-IP throttle on the upload endpoint. Likely free-host
+  path: Cloudflare Tunnel for demos, Oracle Always Free VM (ARM: images must
+  be aarch64) for real hosting; 512MB free tiers are too small for the JVM +
+  ONNX model.
 
 ## 4. Tech Stack (locked)
 

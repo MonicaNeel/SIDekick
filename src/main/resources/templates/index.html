@@ -75,6 +75,20 @@
     </details>
 </div>
 
+<details class="card" id="upload-card">
+    <summary>Upload a SID for a fund not in the list</summary>
+    <div style="margin-top: .8rem">
+        <label for="up-fund">Fund id (lowercase-kebab, e.g. nippon-small-cap)</label>
+        <input id="up-fund" type="text" style="width:100%; padding:.55rem .7rem; border:1px solid var(--line); border-radius:8px; font:inherit">
+        <label for="up-name" style="margin-top:.7rem">Fund name (shown in the dropdown)</label>
+        <input id="up-name" type="text" style="width:100%; padding:.55rem .7rem; border:1px solid var(--line); border-radius:8px; font:inherit">
+        <label for="up-file" style="margin-top:.7rem">SID PDF</label>
+        <input id="up-file" type="file" accept="application/pdf">
+        <button id="up-go">Upload &amp; ingest</button>
+        <div class="source-note" id="up-status"></div>
+    </div>
+</details>
+
 <p class="disclaimer">
     <strong>Disclaimer:</strong> Answers report only what the selected Scheme
     Information Document says, as of the document's date shown above.
@@ -154,6 +168,46 @@
         .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;');
 
+    async function upload() {
+        const status = el('up-status');
+        const form = new FormData();
+        const file = el('up-file').files[0];
+        if (!file) { status.textContent = 'Choose a PDF first.'; return; }
+        form.append('file', file);
+        form.append('fundId', el('up-fund').value.trim());
+        form.append('displayName', el('up-name').value.trim());
+        el('up-go').disabled = true;
+        status.textContent = 'Uploading…';
+        try {
+            const response = await fetch('/api/documents', {method: 'POST', body: form});
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || response.statusText);
+            await pollJob(data.jobId, status);
+        } catch (e) {
+            status.textContent = 'Failed: ' + e.message;
+        } finally {
+            el('up-go').disabled = false;
+        }
+    }
+
+    async function pollJob(jobId, status) {
+        for (;;) {
+            const job = await (await fetch(`/api/jobs/${jobId}`)).json();
+            if (job.status === 'DONE') {
+                status.textContent = `Done — ${job.chunkCount} chunks from ${job.pages} pages. It may take a moment to become searchable.`;
+                await loadFunds();
+                return;
+            }
+            if (job.status === 'FAILED') {
+                status.textContent = 'Failed: ' + job.error;
+                return;
+            }
+            status.textContent = `Ingesting… (${job.status.toLowerCase()} — embedding takes a minute or two)`;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+
+    el('up-go').onclick = upload;
     el('ask').onclick = ask;
     el('question').addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
